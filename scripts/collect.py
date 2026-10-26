@@ -31,10 +31,17 @@ def main():
     config = json.loads((ROOT/'public/data/config.json').read_text())
     start = dt.datetime.now(dt.timezone(dt.timedelta(hours=8))).date()
     end = start + dt.timedelta(days=180)
-    months = sorted({(start+dt.timedelta(days=n)).strftime('%Y-%m-01') for n in range(181)})
+    policy=json.loads((ROOT/'notifications.json').read_text())
+    monitor_end=dt.date.fromisoformat(policy['depart_end'])+dt.timedelta(days=policy['max_stay'] if policy['mode']=='round' else 0)
+    monitored={(h,d) for h in policy['homes'] for d in policy['destinations']}
+    monitored|={(b,a) for a,b in list(monitored)}
     fares, errors = [], []
+    query_count=0
     for origin,destination in config['routes']:
+        route_end=max(end,monitor_end) if policy['enabled'] and (origin,destination) in monitored else end
+        months=sorted({(start+dt.timedelta(days=n)).strftime('%Y-%m-01') for n in range((route_end-start).days+1)})
         for month in months:
+            query_count+=1
             query = urllib.parse.urlencode(dict(origin=origin,destination=destination,month=month,currency='cny',one_way='true',show_to_affiliates='false',limit=31))
             request = urllib.request.Request('https://api.travelpayouts.com/v2/prices/month-matrix?'+query,headers={'X-Access-Token':token})
             payload = None
@@ -52,13 +59,13 @@ def main():
                 errors.append(dict(route=f'{origin}-{destination}',month=month,reason='请求失败；未使用旧报价补充'))
             else:
                 for row in payload['data']:
-                    fare = normalize(row,origin,destination,start,end)
+                    fare = normalize(row,origin,destination,start,route_end)
                     if fare: fares.append(fare)
             time.sleep(0.35)
-    if len(errors)==len(config['routes'])*len(months):
+    if len(errors)==query_count:
         raise SystemExit('全部请求失败，保留上次数据；请检查 Token 权限和供应商状态。')
     unique={ (f['origin'],f['destination'],f['date'],f['stops']):f for f in sorted(fares,key=lambda x:x['price'],reverse=True) }
-    result=dict(status='partial' if errors else 'ok',updated_at=dt.datetime.now(UTC).isoformat(),coverage_end=end.isoformat(),fares=list(unique.values()),errors=errors)
+    result=dict(status='partial' if errors else 'ok',updated_at=dt.datetime.now(UTC).isoformat(),coverage_end=max(end,monitor_end if policy['enabled'] else end).isoformat(),fares=list(unique.values()),errors=errors)
     target=ROOT/'public/data/fares.json'
     temp=target.with_suffix('.tmp')
     temp.write_text(json.dumps(result,ensure_ascii=False,indent=2))

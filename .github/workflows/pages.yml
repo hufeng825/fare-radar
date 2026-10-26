@@ -2,6 +2,8 @@ name: Update fares and deploy Pages
 on:
   push:
     branches: [main]
+  issues:
+    types: [opened, edited]
   workflow_dispatch:
     inputs:
       test_notifications:
@@ -19,6 +21,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   deploy:
+    if: ${{ github.event_name != 'issues' || (github.event.sender.login == github.repository_owner && github.event.issue.user.login == github.repository_owner && github.event.issue.title == '候鸟配置：更新监控规则') }}
     runs-on: ubuntu-latest
     timeout-minutes: 40
     environment:
@@ -32,6 +35,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Apply and load monitoring policy
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: python3 scripts/policy.py
       - run: npm test
       - name: Collect cached fares when configured
         if: ${{ !inputs.test_notifications }}

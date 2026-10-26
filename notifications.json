@@ -1,8 +1,24 @@
 {
-  "budget_cny": 800,
+  "enabled": true,
+  "homes": [
+    "HGH",
+    "SHA"
+  ],
+  "destinations": [
+    "OSA"
+  ],
+  "mode": "round",
+  "depart_start": "2027-01-01",
+  "depart_end": "2027-12-31",
+  "budget_cny": 1600,
+  "per_leg_budget_cny": 800,
   "direct_only": true,
-  "horizon_days": 90,
+  "min_stay": 3,
+  "max_stay": 14,
   "min_drop_cny": 30,
-  "max_items_per_digest": 20,
-  "max_digests_per_day": 4
+  "max_items_per_digest": 10,
+  "max_digests_per_day": 4,
+  "max_per_route": 2,
+  "wechat_enabled": true,
+  "email_enabled": false
 }

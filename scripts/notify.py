@@ -24,11 +24,17 @@ def digest(value):
     return hashlib.sha256(value.encode()).hexdigest()
 
 def key(fare):
-    return digest('|'.join(str(fare[k]) for k in ('origin','destination','date','stops')))
+    parts=[str(fare[k]) for k in ('origin','destination','date','stops')]
+    if fare.get('returnFare'):parts += [fare['returnFare']['date'],str(fare['returnFare']['stops'])]
+    return digest('|'.join(parts))
 
 def candidates(fares, config, routes, now):
     first=now.astimezone(TZ).date()
-    last=first+dt.timedelta(days=config['horizon_days'])
+    last=first+dt.timedelta(days=config.get('horizon_days',90))
+    if config.get('depart_end'):
+        first=max(first,dt.date.fromisoformat(config['depart_start']))
+        last=dt.date.fromisoformat(config['depart_end'])+dt.timedelta(days=config.get('max_stay',0) if config.get('mode')=='round' else 0)
+    cap=min(config['budget_cny'],config.get('per_leg_budget_cny',config['budget_cny']))
     cheapest={}
     for fare in fares:
         try:
@@ -36,20 +42,40 @@ def candidates(fares, config, routes, now):
             date=dt.date.fromisoformat(fare['date'])
             found=dt.datetime.fromisoformat(fare['found_at'].replace('Z','+00:00'))
             fresh=0 <= (now-found).total_seconds() <= 48*3600
-            if (fare['origin'],fare['destination']) not in routes or fare['currency']!='CNY' or not math.isfinite(price) or not 0<price<=config['budget_cny'] or not first<=date<=last or not fresh or (config['direct_only'] and fare['stops']!=0):
+            if (fare['origin'],fare['destination']) not in routes or fare['currency']!='CNY' or not math.isfinite(price) or not 0<price<=cap or not first<=date<=last or not fresh or (config['direct_only'] and fare['stops']!=0):
                 continue
             k=key(fare)
             if k not in cheapest or price<cheapest[k]['price']:
                 cheapest[k]=fare
         except (KeyError,ValueError,TypeError,OverflowError):
             continue
-    return sorted(cheapest.values(),key=lambda f:f['price'])
+    available=sorted(cheapest.values(),key=lambda f:f['price'])
+    if not config.get('mode'):return available
+    homes=config['homes'];destinations=config['destinations'];mode=config['mode']
+    outbound=[f for f in available if f['origin'] in homes and f['destination'] in destinations and f['date']<=config['depart_end']]
+    if mode=='out':return outbound
+    if mode=='back':return [f for f in available if f['origin'] in destinations and f['destination'] in homes and f['date']<=config['depart_end']]
+    pairs=[]
+    for a in outbound:
+        for b in available:
+            if b['origin']!=a['destination'] or b['destination']!=a['origin']:continue
+            days=(dt.date.fromisoformat(b['date'])-dt.date.fromisoformat(a['date'])).days
+            if config['min_stay']<=days<=config['max_stay'] and a['price']+b['price']<=config['budget_cny']:
+                pairs.append(dict(a,price=a['price']+b['price'],outbound_price=a['price'],returnFare=b))
+    return sorted(pairs,key=lambda f:f['price'])
 
 def select(fares, channel, config, today):
     if channel.get('day')==today and channel.get('digests',0)>=config['max_digests_per_day']:
         return []
     sent=channel.get('sent',{})
-    return [f for f in fares if key(f) not in sent or sent[key(f)]['price']-f['price']>=config['min_drop_cny']][:config['max_items_per_digest']]
+    picked=[];counts={}
+    for f in fares:
+        if key(f) in sent and sent[key(f)]['price']-f['price']<config['min_drop_cny']:continue
+        route=(f['origin'],f['destination'])
+        if counts.get(route,0)>=config.get('max_per_route',config['max_items_per_digest']):continue
+        picked.append(f);counts[route]=counts.get(route,0)+1
+        if len(picked)>=config['max_items_per_digest']:break
+    return picked
 
 def mark(channel, fares, today):
     count=channel.get('digests',0) if channel.get('day')==today else 0
@@ -61,13 +87,18 @@ def message(fares,cities,test=False):
     if test:
         return '候鸟机票雷达 · 通道测试','这是一条推送通道测试消息，不含真实机票报价。\n收到后请回到 Codex 确认邮件/微信实际送达。'
     best=fares[0]
-    title=f"¥{best['price']:g} {cities[best['origin']]['name']}→{cities[best['destination']]['name']} {best['date'][5:]} · {len(fares)}条低价"
+    arrow='⇄' if best.get('returnFare') else '→'
+    title=f"¥{best['price']:g} {cities[best['origin']]['name']}{arrow}{cities[best['destination']]['name']} {best['date']} · {len(fares)}条低价"
     lines=['以下是近期用户搜索缓存报价，并非实时可购保证。人民币/成人经济舱；税费、行李、手续费请在购票页确认。','']
     for f in fares:
         a=cities[f['origin']]['name'];b=cities[f['destination']]['name']
         query=urllib.parse.quote(f"{a} {f['origin']} to {b} {f['destination']} {f['date']} one way")
-        lines.extend([f"{a} → {b} | {f['date']} | ¥{f['price']:g} | {'直飞' if f['stops']==0 else str(f['stops'])+' 次中转'}",f"缓存发现时间：{f['found_at']}",'https://www.google.com/travel/flights?hl=zh-CN&curr=CNY&gl=CN&q='+query,''])
-    lines.append('相同航线/日期/转机数不重复提醒；比上次已提醒价下降达到配置金额才重发。往返分别提醒，不自动下单。')
+        if f.get('returnFare'):
+            back=f['returnFare'];back_query=urllib.parse.quote(f"{b} {f['destination']} to {a} {f['origin']} {back['date']} one way")
+            lines.extend([f"{a} ⇄ {b} | {f['date']} 出发 / {back['date']} 返回 | 往返 ¥{f['price']:g}",f"去程 ¥{f['outbound_price']:g} / 返程 ¥{back['price']:g}",'去程：https://www.google.com/travel/flights?hl=zh-CN&curr=CNY&gl=CN&q='+query,'返程：https://www.google.com/travel/flights?hl=zh-CN&curr=CNY&gl=CN&q='+back_query,''])
+        else:
+            lines.extend([f"{a} → {b} | {f['date']} | ¥{f['price']:g} | {'直飞' if f['stops']==0 else str(f['stops'])+' 次中转'}",f"缓存发现时间：{f['found_at']}",'https://www.google.com/travel/flights?hl=zh-CN&curr=CNY&gl=CN&q='+query,''])
+    lines.append('相同行程不重复提醒；达到配置降价幅度才重发。往返组合是两张独立单程票，购票前请分别核实。')
     return title,'\n'.join(lines)
 
 def send_email(title,body):
@@ -136,10 +167,12 @@ def main():
     args=parser.parse_args()
     cfg=json.loads((ROOT/'notifications.json').read_text())
     routecfg=json.loads((ROOT/'public/data/config.json').read_text())
+    if not cfg.get('enabled',True):
+        print('Monitoring paused by saved policy.');return
     enabled=[]
-    if all(os.getenv(k) for k in ['SMTP_USER','SMTP_PASSWORD','EMAIL_TO']):
+    if cfg.get('email_enabled',True) and all(os.getenv(k) for k in ['SMTP_USER','SMTP_PASSWORD','EMAIL_TO']):
         enabled.append(('email',digest(os.environ['EMAIL_TO']+os.environ['SMTP_USER']),send_email))
-    if os.getenv('SERVERCHAN_SENDKEY'):
+    if cfg.get('wechat_enabled',True) and os.getenv('SERVERCHAN_SENDKEY'):
         enabled.append(('wechat',digest(os.environ['SERVERCHAN_SENDKEY']),send_wechat))
     if not enabled:
         print('No notification channels configured; skipped.');return

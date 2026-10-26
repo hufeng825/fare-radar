@@ -9,7 +9,7 @@ function searchLink(origin,dest,date){return googleFlightLink(config.cities,orig
 try{const saved=JSON.parse(localStorage.getItem('fare-range')||'null');if(saved&&['7','30','90','180'].includes(saved.preset)){rangePreset=saved.preset;$('end').value=dateAfter(+rangePreset);}else if(saved?.preset==='custom'&&saved.start>=today()&&saved.start<=saved.end&&saved.end<=dateAfter(180)){rangePreset='custom';$('start').value=saved.start;$('end').value=saved.end;}}catch{}
 function updateRange(){
  document.querySelectorAll('[data-days]').forEach(b=>{const active=b.dataset.days===rangePreset;b.classList.toggle('active',active);b.setAttribute('aria-pressed',String(active));});
- $('range-summary').textContent=`${rangePreset==='custom'?'自定义日期':'今天起 '+rangePreset+' 天内'} · ${$('start').value} 至 ${$('end').value} · 微信提醒范围：未来 90 天`;
+ $('range-summary').textContent=`${rangePreset==='custom'?'自定义日期':'今天起 '+rangePreset+' 天内'} · ${$('start').value} 至 ${$('end').value} · 网页日期筛选 · 后台规则见下方监控设置`;
  try{localStorage.setItem('fare-range',JSON.stringify({preset:rangePreset,start:$('start').value,end:$('end').value}));}catch{}
 }
 document.querySelectorAll('[data-days]').forEach(b=>b.addEventListener('click',()=>{rangePreset=b.dataset.days;if(rangePreset!=='custom'){$('start').value=today();$('end').value=dateAfter(+rangePreset);}updateRange();render();}));

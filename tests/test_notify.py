@@ -51,3 +51,21 @@ class NotifyTests(unittest.TestCase):
  def test_real_alert_links_request_chinese_and_cny(self):
   title,body=n.message([FARE],{'HGH':{'name':'杭州'},'OSA':{'name':'大阪'}})
   self.assertIn('hl=zh-CN&curr=CNY&gl=CN',body)
+
+ def test_round_policy_rejects_jeju_wrong_year_and_over_budget_legs(self):
+  config=dict(CONFIG,mode='round',homes=['HGH','SHA'],destinations=['OSA'],depart_start='2027-01-01',depart_end='2027-12-31',min_stay=3,max_stay=14,per_leg_budget_cny=800,budget_cny=1600)
+  a=dict(FARE,date='2027-11-01',price=750)
+  b=dict(FARE,origin='OSA',destination='HGH',date='2027-11-07',price=600)
+  c=dict(a,destination='CJU',price=200)
+  routes={('HGH','OSA'),('OSA','HGH'),('HGH','CJU')}
+  pairs=n.candidates([a,b,c,dict(a,date='2026-11-01'),dict(b,price=900)],config,routes,NOW)
+  self.assertEqual(len(pairs),1)
+  self.assertEqual(pairs[0]['price'],1350)
+  self.assertEqual(pairs[0]['returnFare']['date'],'2027-11-07')
+  self.assertNotEqual(n.key(pairs[0]),n.key(a))
+  title,body=n.message(pairs,{'HGH':{'name':'杭州'},'OSA':{'name':'大阪'}})
+  self.assertIn('⇄',title);self.assertIn('返程：',body);self.assertIn('2027-11-07',body)
+ def test_digest_balances_routes(self):
+  a=dict(FARE,date='2026-11-01');b=dict(FARE,date='2026-11-02');c=dict(FARE,destination='TYO')
+  picked=n.select([a,b,c],{},dict(CONFIG,max_per_route=1),'2026-10-26')
+  self.assertEqual([f['destination'] for f in picked],['OSA','TYO'])
