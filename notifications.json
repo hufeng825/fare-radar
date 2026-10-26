@@ -4,7 +4,12 @@
     "SHA"
   ],
   "destinations": [
-    "OSA"
+    "TYO",
+    "OSA",
+    "NGO",
+    "FUK",
+    "SPK",
+    "OKA"
   ],
   "mode": "round",
   "depart_start": "2027-01-01",
