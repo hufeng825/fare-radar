@@ -66,7 +66,7 @@ def message(fares,cities,test=False):
     for f in fares:
         a=cities[f['origin']]['name'];b=cities[f['destination']]['name']
         query=urllib.parse.quote(f"{a} {f['origin']} to {b} {f['destination']} {f['date']} one way")
-        lines.extend([f"{a} → {b} | {f['date']} | ¥{f['price']:g} | {'直飞' if f['stops']==0 else str(f['stops'])+' 次中转'}",f"缓存发现时间：{f['found_at']}",'https://www.google.com/travel/flights?q='+query,''])
+        lines.extend([f"{a} → {b} | {f['date']} | ¥{f['price']:g} | {'直飞' if f['stops']==0 else str(f['stops'])+' 次中转'}",f"缓存发现时间：{f['found_at']}",'https://www.google.com/travel/flights?hl=zh-CN&curr=CNY&gl=CN&q='+query,''])
     lines.append('相同航线/日期/转机数不重复提醒；比上次已提醒价下降达到配置金额才重发。往返分别提醒，不自动下单。')
     return title,'\n'.join(lines)
 

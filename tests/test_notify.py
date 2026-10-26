@@ -47,3 +47,7 @@ class NotifyTests(unittest.TestCase):
  def test_dry_template_does_not_invent_fares(self):
   title,body=n.message([],{},test=True)
   self.assertIn('通道测试',title);self.assertNotIn('¥',body)
+
+ def test_real_alert_links_request_chinese_and_cny(self):
+  title,body=n.message([FARE],{'HGH':{'name':'杭州'},'OSA':{'name':'大阪'}})
+  self.assertIn('hl=zh-CN&curr=CNY&gl=CN',body)

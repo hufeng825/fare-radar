@@ -1,10 +1,20 @@
-import {today,filterFares,pairFares} from './core.js';
+import {today,filterFares,pairFares,dateAfter as offsetDate,googleFlightLink} from './core.js';
 const $=id=>document.getElementById(id);let mode='out',config,data;
-const dateAfter=n=>{const d=new Date(today()+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10)};
+const dateAfter=n=>offsetDate(today(),n);
+let rangePreset='90';
 $('start').value=today();$('end').value=dateAfter(90);$('start').min=today();$('end').min=today();$('end').max=dateAfter(180);$('start').max=dateAfter(180);
 try{const saved=JSON.parse(localStorage.getItem('fare-settings')||'null');if(saved)for(const id of ['home','region','budget','direct','minStay','maxStay','sort'])if(saved[id]!==undefined){if(id==='direct')$(id).checked=saved[id];else $(id).value=saved[id];}}catch{}
 function text(tag,value,cls){const el=document.createElement(tag);el.textContent=value;if(cls)el.className=cls;return el;}
-function searchLink(origin,dest,date){return 'https://www.google.com/travel/flights?q='+encodeURIComponent(`${config.cities[origin].name} ${origin} to ${config.cities[dest].name} ${dest} ${date} one way`);}
+function searchLink(origin,dest,date){return googleFlightLink(config.cities,origin,dest,date);}
+try{const saved=JSON.parse(localStorage.getItem('fare-range')||'null');if(saved&&['7','30','90','180'].includes(saved.preset)){rangePreset=saved.preset;$('end').value=dateAfter(+rangePreset);}else if(saved?.preset==='custom'&&saved.start>=today()&&saved.start<=saved.end&&saved.end<=dateAfter(180)){rangePreset='custom';$('start').value=saved.start;$('end').value=saved.end;}}catch{}
+function updateRange(){
+ document.querySelectorAll('[data-days]').forEach(b=>{const active=b.dataset.days===rangePreset;b.classList.toggle('active',active);b.setAttribute('aria-pressed',String(active));});
+ $('range-summary').textContent=`${rangePreset==='custom'?'自定义日期':'今天起 '+rangePreset+' 天内'} · ${$('start').value} 至 ${$('end').value} · 微信提醒范围：未来 90 天`;
+ try{localStorage.setItem('fare-range',JSON.stringify({preset:rangePreset,start:$('start').value,end:$('end').value}));}catch{}
+}
+document.querySelectorAll('[data-days]').forEach(b=>b.addEventListener('click',()=>{rangePreset=b.dataset.days;if(rangePreset!=='custom'){$('start').value=today();$('end').value=dateAfter(+rangePreset);}updateRange();render();}));
+for(const id of ['start','end'])$(id).addEventListener('input',()=>{rangePreset='custom';updateRange();});
+updateRange();
 function link(label,url){const a=text('a',label);a.href=url;a.target='_blank';a.rel='noreferrer';return a;}
 function render(){if(!config||!data)return;const s={home:$('home').value,region:$('region').value,budget:+$('budget').value,start:$('start').value,end:$('end').value,direct:$('direct').checked,minStay:+$('minStay').value,maxStay:+$('maxStay').value,direction:mode==='back'?'back':'out'};
 $('stay').hidden=mode!=='round';$('validation').textContent='';$('results').replaceChildren();$('count').textContent='0';

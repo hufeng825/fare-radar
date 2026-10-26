@@ -6,3 +6,12 @@ export function filterFares(fares,s,cities,now=Date.now()){
 export function pairFares(outbound,all,s,now=Date.now()){
  return outbound.flatMap(a=>all.filter(b=>b.origin===a.destination&&b.destination===a.origin&&dayDiff(a.date,b.date)>=s.minStay&&dayDiff(a.date,b.date)<=s.maxStay&&b.price<=s.budget&&b.currency==='CNY'&&b.price>0&&Number.isFinite(b.price)&&(!s.direct||b.stops===0)&&Number.isFinite(Date.parse(b.found_at))&&now-Date.parse(b.found_at)<=48*3600000&&Date.parse(b.found_at)<=now).map(b=>({...a,returnFare:b,total:a.price+b.price}))).sort((a,b)=>a.total-b.total);
 }
+
+export function dateAfter(base,days){
+ const d=new Date(base+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+days);return d.toISOString().slice(0,10);
+}
+export function googleFlightLink(cities,origin,destination,date){
+ const url=new URL('https://www.google.com/travel/flights');
+ url.search=new URLSearchParams({q:`${cities[origin].name} ${origin} to ${cities[destination].name} ${destination} ${date} one way`,hl:'zh-CN',curr:'CNY',gl:'CN'}).toString();
+ return url.href;
+}
