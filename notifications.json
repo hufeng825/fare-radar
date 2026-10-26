@@ -1,0 +1,8 @@
+{
+  "budget_cny": 800,
+  "direct_only": true,
+  "horizon_days": 90,
+  "min_drop_cny": 30,
+  "max_items_per_digest": 20,
+  "max_digests_per_day": 4
+}

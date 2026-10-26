@@ -1,0 +1,182 @@
+{
+  "cities": {
+    "HGH": {
+      "name": "杭州",
+      "region": "中国"
+    },
+    "SHA": {
+      "name": "上海",
+      "region": "中国"
+    },
+    "TYO": {
+      "name": "东京",
+      "region": "日本"
+    },
+    "OSA": {
+      "name": "大阪",
+      "region": "日本"
+    },
+    "NGO": {
+      "name": "名古屋",
+      "region": "日本"
+    },
+    "FUK": {
+      "name": "福冈",
+      "region": "日本"
+    },
+    "SPK": {
+      "name": "札幌",
+      "region": "日本"
+    },
+    "OKA": {
+      "name": "冲绳",
+      "region": "日本"
+    },
+    "HKG": {
+      "name": "香港",
+      "region": "香港"
+    },
+    "SEL": {
+      "name": "首尔",
+      "region": "韩国"
+    },
+    "PUS": {
+      "name": "釜山",
+      "region": "韩国"
+    },
+    "CJU": {
+      "name": "济州",
+      "region": "韩国"
+    }
+  },
+  "routes": [
+    [
+      "HGH",
+      "TYO"
+    ],
+    [
+      "TYO",
+      "HGH"
+    ],
+    [
+      "HGH",
+      "OSA"
+    ],
+    [
+      "OSA",
+      "HGH"
+    ],
+    [
+      "HGH",
+      "NGO"
+    ],
+    [
+      "NGO",
+      "HGH"
+    ],
+    [
+      "HGH",
+      "FUK"
+    ],
+    [
+      "FUK",
+      "HGH"
+    ],
+    [
+      "HGH",
+      "SPK"
+    ],
+    [
+      "SPK",
+      "HGH"
+    ],
+    [
+      "HGH",
+      "OKA"
+    ],
+    [
+      "OKA",
+      "HGH"
+    ],
+    [
+      "HGH",
+      "HKG"
+    ],
+    [
+      "HKG",
+      "HGH"
+    ],
+    [
+      "HGH",
+      "SEL"
+    ],
+    [
+      "SEL",
+      "HGH"
+    ],
+    [
+      "HGH",
+      "PUS"
+    ],
+    [
+      "PUS",
+      "HGH"
+    ],
+    [
+      "HGH",
+      "CJU"
+    ],
+    [
+      "CJU",
+      "HGH"
+    ],
+    [
+      "SHA",
+      "TYO"
+    ],
+    [
+      "TYO",
+      "SHA"
+    ],
+    [
+      "SHA",
+      "OSA"
+    ],
+    [
+      "OSA",
+      "SHA"
+    ],
+    [
+      "SHA",
+      "NGO"
+    ],
+    [
+      "NGO",
+      "SHA"
+    ],
+    [
+      "SHA",
+      "FUK"
+    ],
+    [
+      "FUK",
+      "SHA"
+    ],
+    [
+      "SHA",
+      "SPK"
+    ],
+    [
+      "SPK",
+      "SHA"
+    ],
+    [
+      "SHA",
+      "OKA"
+    ],
+    [
+      "OKA",
+      "SHA"
+    ]
+  ]
+}
