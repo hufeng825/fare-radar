@@ -1,5 +1,4 @@
 {
-  "enabled": true,
   "homes": [
     "HGH",
     "SHA"
@@ -12,13 +11,14 @@
   "depart_end": "2027-12-31",
   "budget_cny": 1600,
   "per_leg_budget_cny": 800,
-  "direct_only": true,
   "min_stay": 3,
   "max_stay": 14,
   "min_drop_cny": 30,
-  "max_items_per_digest": 10,
   "max_digests_per_day": 4,
+  "max_items_per_digest": 10,
   "max_per_route": 2,
+  "enabled": true,
+  "direct_only": true,
   "wechat_enabled": true,
   "email_enabled": false
 }
