@@ -3,7 +3,7 @@
   "channels": {
     "wechat:be52eec9a5be8ed1a9ca2a81cc14f900e4bbde4ee75ff879636df543d8e24ecf": {
       "day": "2026-10-26",
-      "digests": 1,
+      "digests": 2,
       "sent": {
         "f41b86368db08ee7957548f18e35707471528dc0c91a4521b86a0796886edd19": {
           "price": 340.0,
@@ -84,6 +84,86 @@
         "01be60c382dd9e5d55b453bfe53e7209c63227c8125b7e44414af5def3ed824f": {
           "price": 642.0,
           "date": "2026-11-17"
+        },
+        "aaba942241df83a060a75867856c5b2252b09e9c38516af28f06f012acc6240a": {
+          "price": 642.0,
+          "date": "2026-11-18"
+        },
+        "e40d8c3483a0c39bcb37953c77b1282fa8a1f3099fefd616714ac3602e5d1da6": {
+          "price": 650.0,
+          "date": "2026-11-03"
+        },
+        "b0a0a87f53b68a2d690d675b960bbbe9c303c567c7011c4c765b2ef279ab79cd": {
+          "price": 650.0,
+          "date": "2026-11-04"
+        },
+        "a3e28d9e7b163dfc8070e7c3c6a789fa3844162b13eb4de0f52a7e83b10a875b": {
+          "price": 650.0,
+          "date": "2026-11-05"
+        },
+        "ce028fb83ac5e37eb4433187dd54b034d5721358237b811b46c3d8f418b8a747": {
+          "price": 650.0,
+          "date": "2026-11-06"
+        },
+        "7a3dc891abb94ba88a875e5cf400ff958bca5d0d0cee918d8cd1fd9ea579e1f8": {
+          "price": 650.0,
+          "date": "2026-11-07"
+        },
+        "e2369f1b90f414b8276198258f073a9b68a02cd447d823e16f4ded67edf1a61e": {
+          "price": 650.0,
+          "date": "2026-11-08"
+        },
+        "e2726278548cd476f9e6c457d0476f85b7e19da9ac84b15b66adc7b10252a5bf": {
+          "price": 650.0,
+          "date": "2026-11-09"
+        },
+        "1578501263d4f4f07857ba7d981be7bf10e6beee3cfe17df4e3161ec6c5c335f": {
+          "price": 650.0,
+          "date": "2026-11-10"
+        },
+        "45dc2222e2e63254aea40bb81eb3b4f8b7766a8c1bff7d60a7b180ce3a3f10c2": {
+          "price": 650.0,
+          "date": "2026-11-11"
+        },
+        "e2e5966ebe27bc6308388981b299e2c0e385610b9c297569586965fdc396d0e8": {
+          "price": 650.0,
+          "date": "2026-11-12"
+        },
+        "ad5f7a2fc756afd0eea4f9c5b1badb9640788a5d899ca668120261921d85c395": {
+          "price": 656.0,
+          "date": "2026-11-06"
+        },
+        "d189ae1f6c1718476d4fd66c36447957c4cbfc3d2b20762b162537ebb0aaf94c": {
+          "price": 656.0,
+          "date": "2026-11-07"
+        },
+        "2cf25e3858c5a9ac539ba87a0b8334552f671569c0638f3247c92bc3609cf76b": {
+          "price": 656.0,
+          "date": "2026-11-08"
+        },
+        "63aa5c13f35469141ce24cb112f16a47f4b1817bb2cf52449af9ded6e7046602": {
+          "price": 662.0,
+          "date": "2027-01-10"
+        },
+        "03b805a2380fd7ee640f0401e6cc524c4f39e94a752c7158591a5f84e98361b1": {
+          "price": 662.0,
+          "date": "2027-01-11"
+        },
+        "732ed815957f844f031e21f0dc9b4c80cbd93ce7ab9bd1421efe187053594f5e": {
+          "price": 662.0,
+          "date": "2027-01-12"
+        },
+        "44610c70dfbf7177ef89532f38f51f5dcef4963a18710f3cdce84d0b1b4122b7": {
+          "price": 662.0,
+          "date": "2027-01-13"
+        },
+        "e53901fb77c51236671b14daa9176676c36edf2860e2076de26c7eee40d30007": {
+          "price": 662.0,
+          "date": "2027-01-14"
+        },
+        "5c70bc0b24c2db12fc24579523be0619f87f943c45a0b88bf41447b7cc3ca13b": {
+          "price": 673.0,
+          "date": "2026-11-20"
         }
       }
     }
