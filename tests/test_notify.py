@@ -52,6 +52,15 @@ class NotifyTests(unittest.TestCase):
   title,body=n.message([FARE],{'HGH':{'name':'杭州'},'OSA':{'name':'大阪'}})
   self.assertIn('hl=zh-CN&curr=CNY&gl=CN',body)
 
+ def test_shanghai_links_include_both_airports_in_both_directions(self):
+  import base64,urllib.parse
+  u=urllib.parse.urlparse(n.google_link('SHA','OSA','2027-02-23','2027-03-03'))
+  t=urllib.parse.parse_qs(u.query)['tfs'][0]
+  data=base64.urlsafe_b64decode(t+'='*(-len(t)%4))
+  self.assertEqual(data.count(b'/m/06wjf'),2)
+  self.assertNotIn(b'SHA',data)
+  self.assertIn(b'\x08\x03\x12\x08/m/06wjf',data)
+
  def test_round_policy_rejects_jeju_wrong_year_and_over_budget_legs(self):
   config=dict(CONFIG,mode='round',homes=['HGH','SHA'],destinations=['OSA'],depart_start='2027-01-01',depart_end='2027-12-31',min_stay=3,max_stay=14,per_leg_budget_cny=800,budget_cny=1600)
   a=dict(FARE,date='2027-11-01',price=750)

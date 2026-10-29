@@ -1,4 +1,4 @@
-import {today,dateAfter,dayDiff,googleFlightLink} from './core.js?v=20261029b';
+import {today,dateAfter,dayDiff,googleFlightLink} from './core.js?v=20261029c';
 const $=id=>document.getElementById(id),repo='hufeng825/fare-radar';
 let cities,routeConfig,snapshot,saved;
 const fields={'monitor-budget':'budget_cny','monitor-leg-budget':'per_leg_budget_cny','monitor-min-stay':'min_stay','monitor-max-stay':'max_stay','monitor-drop':'min_drop_cny','monitor-daily':'max_digests_per_day','monitor-items':'max_items_per_digest','monitor-per-route':'max_per_route'};

@@ -90,7 +90,9 @@ def google_link(origin,destination,date,return_date=None):
         return bytes(a+[n])
     def msg(k,b):return var(k*8+2)+var(len(b))+b
     def string(k,t):return msg(k,t.encode())
-    def leg(a,b,d):return msg(3,string(2,d)+msg(13,b'\x08\x01'+string(2,a))+msg(14,b'\x08\x01'+string(2,b)))
+    # SHA denotes Shanghai metro in provider data; include Pudong and Hongqiao.
+    def place(code):return b'\x08\x03'+string(2,'/m/06wjf') if code=='SHA' else b'\x08\x01'+string(2,code)
+    def leg(a,b,d):return msg(3,string(2,d)+msg(13,place(a))+msg(14,place(b)))
     data=b'\x08\x1c\x10\x02'+leg(origin,destination,date)+(leg(destination,origin,return_date) if return_date else b'')+bytes([64,1,72,1,152,1,1 if return_date else 2])
     return 'https://www.google.com/travel/flights/search?'+urllib.parse.urlencode(dict(tfs=base64.urlsafe_b64encode(data).decode().rstrip('='),hl='zh-CN',curr='CNY',gl='CN'))
 
