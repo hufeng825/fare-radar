@@ -83,6 +83,17 @@ def mark(channel, fares, today):
     for f in fares: sent[key(f)]=dict(price=f['price'],date=f['date'])
     channel.update(day=today,digests=count+1,sent=sent)
 
+def google_link(origin,destination,date,return_date=None):
+    def var(n):
+        a=[]
+        while n>127:a.append((n&127)|128);n>>=7
+        return bytes(a+[n])
+    def msg(k,b):return var(k*8+2)+var(len(b))+b
+    def string(k,t):return msg(k,t.encode())
+    def leg(a,b,d):return msg(3,string(2,d)+msg(13,b'\x08\x01'+string(2,a))+msg(14,b'\x08\x01'+string(2,b)))
+    data=b'\x08\x1c\x10\x02'+leg(origin,destination,date)+(leg(destination,origin,return_date) if return_date else b'')+bytes([64,1,72,1,152,1,1 if return_date else 2])
+    return 'https://www.google.com/travel/flights/search?'+urllib.parse.urlencode(dict(tfs=base64.urlsafe_b64encode(data).decode().rstrip('='),hl='zh-CN',curr='CNY',gl='CN'))
+
 def message(fares,cities,test=False):
     if test:
         return '候鸟机票雷达 · 通道测试','这是一条推送通道测试消息，不含真实机票报价。\n收到后请回到 Codex 确认邮件/微信实际送达。'
@@ -95,9 +106,9 @@ def message(fares,cities,test=False):
         query=urllib.parse.quote(f"{a} {f['origin']} to {b} {f['destination']} {f['date']} one way")
         if f.get('returnFare'):
             back=f['returnFare'];back_query=urllib.parse.quote(f"{b} {f['destination']} to {a} {f['origin']} {back['date']} one way")
-            lines.extend([f"{a} ⇄ {b} | {f['date']} 出发 / {back['date']} 返回 | 往返 ¥{f['price']:g}",f"去程 ¥{f['outbound_price']:g} / 返程 ¥{back['price']:g}",'去程：https://www.google.com/travel/flights?hl=zh-CN&curr=CNY&gl=CN&q='+query,'返程：https://www.google.com/travel/flights?hl=zh-CN&curr=CNY&gl=CN&q='+back_query,''])
+            lines.extend([f"{a} ⇄ {b} | {f['date']} 出发 / {back['date']} 返回 | 往返 ¥{f['price']:g}",f"去程 ¥{f['outbound_price']:g} / 返程 ¥{back['price']:g}",'往返：'+google_link(f['origin'],f['destination'],f['date'],back['date']),'去程：'+google_link(f['origin'],f['destination'],f['date']),'返程：'+google_link(back['origin'],back['destination'],back['date']),''])
         else:
-            lines.extend([f"{a} → {b} | {f['date']} | ¥{f['price']:g} | {'直飞' if f['stops']==0 else str(f['stops'])+' 次中转'}",f"缓存发现时间：{f['found_at']}",'https://www.google.com/travel/flights?hl=zh-CN&curr=CNY&gl=CN&q='+query,''])
+            lines.extend([f"{a} → {b} | {f['date']} | ¥{f['price']:g} | {'直飞' if f['stops']==0 else str(f['stops'])+' 次中转'}",f"缓存发现时间：{f['found_at']}",google_link(f['origin'],f['destination'],f['date']),''])
     lines.append('相同行程不重复提醒；达到配置降价幅度才重发。往返组合是两张独立单程票，购票前请分别核实。')
     return title,'\n'.join(lines)
 

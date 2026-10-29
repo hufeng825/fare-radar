@@ -10,8 +10,14 @@ export function pairFares(outbound,all,s,now=Date.now()){
 export function dateAfter(base,days){
  const d=new Date(base+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+days);return d.toISOString().slice(0,10);
 }
-export function googleFlightLink(cities,origin,destination,date){
- const url=new URL('https://www.google.com/travel/flights');
- url.search=new URLSearchParams({q:`${cities[origin].name} ${origin} to ${cities[destination].name} ${destination} ${date} one way`,hl:'zh-CN',curr:'CNY',gl:'CN'}).toString();
- return url.href;
+// Google Flights search state (protobuf). Free-text q is only a fallback.
+export function googleFlightLink(cities,origin,destination,date,returnDate=null){
+ const v=n=>{const a=[];do{let b=n&127;n>>>=7;if(n)b|=128;a.push(b);}while(n);return a;};
+ const msg=(field,bytes)=>[...v(field*8+2),...v(bytes.length),...bytes];
+ const str=(field,value)=>msg(field,[...new TextEncoder().encode(value)]);
+ const leg=(a,b,d)=>msg(3,[...str(2,d),...msg(13,[8,1,...str(2,a)]),...msg(14,[8,1,...str(2,b)])]);
+ const bytes=[8,28,16,2,...leg(origin,destination,date),...(returnDate?leg(destination,origin,returnDate):[]),64,1,72,1,152,1,returnDate?1:2];
+ const tfs=btoa(String.fromCharCode(...bytes)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+ const url=new URL('https://www.google.com/travel/flights/search');
+ url.search=new URLSearchParams({tfs,hl:'zh-CN',curr:'CNY',gl:'CN'}).toString();return url.href;
 }
