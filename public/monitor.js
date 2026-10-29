@@ -1,4 +1,4 @@
-import {today,dateAfter,dayDiff,googleFlightLink} from './core.js?v=20261029c';
+import {today,dateAfter,dayDiff,googleFlightLink} from './core.js?v=20261029d';
 const $=id=>document.getElementById(id),repo='hufeng825/fare-radar';
 let cities,routeConfig,snapshot,saved;
 const fields={'monitor-budget':'budget_cny','monitor-leg-budget':'per_leg_budget_cny','monitor-min-stay':'min_stay','monitor-max-stay':'max_stay','monitor-drop':'min_drop_cny','monitor-daily':'max_digests_per_day','monitor-items':'max_items_per_digest','monitor-per-route':'max_per_route'};
@@ -60,3 +60,5 @@ $('edit-watch').addEventListener('click',()=>{$('watch-editor').open=!$('watch-e
 for(const name of ['monitor','explore'])$('tab-'+name).addEventListener('click',()=>{document.querySelector('.monitor-panel').hidden=name!=='monitor';$('explore-panel').hidden=name!=='explore';for(const n of ['monitor','explore']){$('tab-'+n).classList.toggle('active',n===name);$('tab-'+n).setAttribute('aria-pressed',String(n===name));}});
 
 try{const responses=await Promise.all(['config','fares'].map(n=>fetch(`./data/${n}.json?t=${Date.now()}`)));[routeConfig,snapshot]=await Promise.all(responses.map(r=>r.json()));cities=routeConfig.cities;for(const [id,values]of [['monitor-homes',['HGH','SHA']],['monitor-destinations',Object.keys(cities).filter(x=>!['HGH','SHA'].includes(x))]]){for(const code of values){const label=document.createElement('label'),input=document.createElement('input');input.type='checkbox';input.value=code;label.append(input,document.createTextNode(cities[code].name));$(id).append(label);}}for(const id of ['monitor-start','monitor-end'])$(id).max=dateAfter(today(),730);await load();}catch{$('saved-policy').textContent='监控配置读取失败，请刷新重试。';$('save-policy').disabled=true;}
+
+document.querySelector('.settings-link').addEventListener('click',e=>{e.preventDefault();$('tab-monitor').click();$('watch-editor').open=true;$('watch-editor').scrollIntoView({behavior:'smooth'});});
