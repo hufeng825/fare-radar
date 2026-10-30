@@ -38,7 +38,7 @@ async function load(refresh=true){
   if(ready&&refresh)await loadFares();
   let c,cloud=true;
   try{const payload=await json(`https://api.github.com/repos/${repo}/contents/notifications.json?t=${Date.now()}`,8000);c=JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(payload.content.replace(/\s/g,'')),x=>x.charCodeAt(0))));if(!Array.isArray(c.destinations))throw Error();}
-  catch{cloud=false;c=saved||await json('./data/monitor.json');}
+  catch{cloud=false;try{c=await json('./data/monitor.json?t='+Date.now());}catch{if(!saved)throw Error('无法读取规则');c=saved;}}
   saved=c;
   if(!pending&&!ready){try{const d=JSON.parse(localStorage.getItem(storageKey));if(d?.base===policySignature(c))pending=d.policy;else localStorage.removeItem(storageKey);}catch{}}
   fill(pending||c);$('saved-policy').textContent=(cloud?'云端正在执行：':'云端暂不可读；上次已保存规则：')+summarize(c);ready=true;$('monitor-controls').disabled=false;preview();
