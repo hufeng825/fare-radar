@@ -1,7 +1,7 @@
-import {today,dateAfter,dayDiff,googleFlightLink} from './core.js?v=20261030a';
-import {searchDestinations,policySignature,MAX_DESTINATIONS} from './destinations.js?v=20261030a';
+import {today,dateAfter,dayDiff,googleFlightLink} from './core.js?v=20261030b';
+import {searchDestinations,policySignature,MAX_DESTINATIONS} from './destinations.js?v=20261030b';
 const $=id=>document.getElementById(id),repo='hufeng825/fare-radar',storageKey='fare-watch-draft-v2';
-let cities={},routeConfig,snapshot,saved,known={},watched=new Set(),ready=false,loading=false;
+let cities={},routeConfig,snapshot={fares:[],status:"loading",updated_at:null},saved,known={},watched=new Set(),ready=false,loading=false,catalogReady=false,faresLoading=true;
 const fields={'monitor-budget':'budget_cny','monitor-leg-budget':'per_leg_budget_cny','monitor-min-stay':'min_stay','monitor-max-stay':'max_stay','monitor-drop':'min_drop_cny','monitor-daily':'max_digests_per_day','monitor-items':'max_items_per_digest','monitor-per-route':'max_per_route'};
 const toggles={'monitor-enabled':'enabled','monitor-direct':'direct_only','monitor-wechat':'wechat_enabled','monitor-email':'email_enabled'};
 function selected(id){return [...$(id).querySelectorAll('input:checked')].map(x=>x.value);}
@@ -27,17 +27,17 @@ function addDestination(code){
 }
 function renderSuggestions(){
  const q=$('destination-query').value.trim(),box=$('destination-suggestions');box.replaceChildren();box.hidden=!q;if(!q)return;
- const rows=searchDestinations(known,q);if(!rows.length){box.append(element('p','未找到该城市。可试英文名或机场三字代码；请从目录结果中添加。'));return;}
+ const rows=searchDestinations(known,q);if(!rows.length){box.append(element('p',catalogReady?'未找到该城市。可试英文名或机场三字代码；请从目录结果中添加。':'完整城市目录正在加载，完成后会自动显示搜索结果。'));return;}
  for(const c of rows){const b=element('button',undefined,'destination-option');b.type='button';b.append(element('strong',c.name+' '+c.code),element('span',`${c.region} · ${c.en}${c.airports.length?' · '+c.airports.slice(0,4).join(' / '):''}`),element('small',watched.has(c.code)?'已关注':'＋ 关注'));b.disabled=watched.has(c.code);b.addEventListener('click',()=>addDestination(c.code));box.append(b);}
 }
 function remember(c){try{if(dirty(c))localStorage.setItem(storageKey,JSON.stringify({base:policySignature(saved),policy:c}));else localStorage.removeItem(storageKey);}catch{}}
-async function json(url){const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),10000);try{const r=await fetch(url,{cache:'no-store',signal:controller.signal});if(!r.ok)throw Error('读取失败');return await r.json();}finally{clearTimeout(timer);}}
+async function json(url,timeout=30000,cache="no-store"){const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),timeout);try{const r=await fetch(url,{cache,signal:controller.signal});if(!r.ok)throw Error('读取失败');return await r.json();}finally{clearTimeout(timer);}}
 async function load(refresh=true){
  if(loading)return;loading=true;$('reload-policy').disabled=true;let pending=ready&&dirty()?draft():null;
  try{
-  if(ready&&refresh){const fresh=await json('./data/fares.json?t='+Date.now());snapshot=fresh;}
+  if(ready&&refresh)await loadFares();
   let c,cloud=true;
-  try{const payload=await json(`https://api.github.com/repos/${repo}/contents/notifications.json?t=${Date.now()}`);c=JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(payload.content.replace(/\s/g,'')),x=>x.charCodeAt(0))));if(!Array.isArray(c.destinations))throw Error();}
+  try{const payload=await json(`https://api.github.com/repos/${repo}/contents/notifications.json?t=${Date.now()}`,8000);c=JSON.parse(new TextDecoder().decode(Uint8Array.from(atob(payload.content.replace(/\s/g,'')),x=>x.charCodeAt(0))));if(!Array.isArray(c.destinations))throw Error();}
   catch{cloud=false;c=saved||await json('./data/monitor.json');}
   saved=c;
   if(!pending&&!ready){try{const d=JSON.parse(localStorage.getItem(storageKey));if(d?.base===policySignature(c))pending=d.policy;else localStorage.removeItem(storageKey);}catch{}}
@@ -72,17 +72,17 @@ function preview(){
  $('draft-state').textContent=changed?'本机草稿 · 尚未同步微信':'已与云端规则一致';$('reset-policy').disabled=!changed;$('save-policy').disabled=!changed;
  $('monitor-preview').replaceChildren();
  try{check(c);}catch(e){$('monitor-feedback').textContent=e.message;$('save-policy').disabled=true;return;}
- const age=Date.now()-Date.parse(snapshot.updated_at);$('watch-health').textContent=!Number.isFinite(age)||age>24*3600000?'当前快照已过期，等待后台更新；不会把旧报价当作新低价提醒。':`更新于 ${new Date(snapshot.updated_at).toLocaleString('zh-CN',{timeZone:'Asia/Shanghai'})} · 后台约每 6 小时查价`;
+ const age=Date.now()-Date.parse(snapshot.updated_at);$('watch-health').textContent=faresLoading?'正在读取最新票价快照…':!Number.isFinite(age)||age>24*3600000?'当前快照已过期，等待后台更新；不会把旧报价当作新低价提醒。':`更新于 ${new Date(snapshot.updated_at).toLocaleString('zh-CN',{timeZone:'Asia/Shanghai'})} · 后台约每 6 小时查价`;
  const rows=opportunities(c).sort((a,b)=>a.price-b.price),dates=new Set();
  const distinct=rows.filter(f=>{const k=[f.origin,f.destination,f.date].join('-');if(dates.has(k))return false;dates.add(k);return true;});
- $('monitor-feedback').textContent=distinct.length?`找到 ${distinct.length} 个出发日期，同一天保留最便宜组合。${changed?'当前为草稿预览。':''}`:'暂无完全符合当前条件的新鲜报价。';
+ $('monitor-feedback').textContent=faresLoading?'正在读取票价，可先编辑目的地和条件。':snapshot.status==='error'?'票价暂时读取失败，请点击刷新重试。关注草稿仍可正常编辑。':distinct.length?`找到 ${distinct.length} 个出发日期，同一天保留最便宜组合。${changed?'当前为草稿预览。':''}`:'暂无完全符合当前条件的新鲜报价。';
  const newCities=c.destinations.filter(d=>!routeConfig.routes.some(([a,b])=>c.homes.includes(a)&&b===d));
  if(newCities.length)$('monitor-preview').append(element('p',`${names(newCities)} 尚未纳入这份快照。同步保存后后台会尝试采集；下方可先手动查票。`,'pending-destinations'));
  if(distinct.length){const buckets=new Map();for(const f of distinct){const k=f.origin+'-'+f.destination;if(!buckets.has(k))buckets.set(k,[]);buckets.get(k).push(f);}let count=0;for(let i=0;i<3;i++)for(const group of buckets.values())if(group[i]&&count++<12)$('monitor-preview').append(renderMatch(group[i]));}
  else{
   const alternative=opportunities({...c,budget_cny:100000,per_leg_budget_cny:100000}).sort((a,b)=>a.price-b.price)[0];
-  const box=element('div',undefined,'empty-match');box.append(element('h4',alternative?'相同条件下，有预算外的参考':'先关注起来，等好价格出现'));
-  box.append(element('p',alternative?`目前缓存最低约 ¥${alternative.price}；你的总预算 ¥${c.budget_cny}，每程最多 ¥${c.per_leg_budget_cny}。`:'免费缓存不覆盖全部航班。可以调整日期和停留天数，也可以直接去查票。'));
+  const box=element('div',undefined,'empty-match');box.append(element('h4',faresLoading?'票价正在载入…':snapshot.status==='error'?'暂时无法读取报价':alternative?'相同条件下，有预算外的参考':'先关注起来，等好价格出现'));
+  box.append(element('p',faresLoading?'目的地、日期和预算已可编辑，结果加载完成后会自动更新。':snapshot.status==='error'?'可以稍后刷新票价，也可以使用下方的直接查票入口。':alternative?`目前缓存最低约 ¥${alternative.price}；你的总预算 ¥${c.budget_cny}，每程最多 ¥${c.per_leg_budget_cny}。`:'免费缓存不覆盖全部航班。可以调整日期和停留天数，也可以直接去查票。'));
   if(alternative){const b=element('button','按参考价格预览','secondary');b.type='button';b.addEventListener('click',()=>{$('monitor-budget').value=Math.ceil(alternative.price/100)*100;$('monitor-leg-budget').value=Math.ceil(Math.max(alternative.returnFare?.price||alternative.price,alternative.returnFare?alternative.price-alternative.returnFare.price:0)/100)*100;preview();});box.append(b);}
   $('monitor-preview').append(box);if(alternative)$('monitor-preview').append(renderMatch(alternative,true));
  }
@@ -102,13 +102,25 @@ $('monitor-form').addEventListener('submit',e=>{e.preventDefault();try{const c=d
 $('monitor-mode').addEventListener('change',updateMode);
 $('monitor-period').addEventListener('change',()=>{const v=$('monitor-period').value;if(v==='next-year'){const y=+today().slice(0,4)+1;$('monitor-start').value=`${y}-01-01`;$('monitor-end').value=`${y}-12-31`;}else if(v!=='custom'){$('monitor-start').value=today();$('monitor-end').value=dateAfter(today(),+v);}});
 for(const id of ['monitor-start','monitor-end'])$(id).addEventListener('input',()=>{$('monitor-period').value='custom';});
-$('monitor-form').addEventListener('change',()=>preview());let timer;$('monitor-form').addEventListener('input',e=>{if(e.target.id==='destination-query')return;clearTimeout(timer);timer=setTimeout(preview,250);});$('reload-policy').addEventListener('click',()=>{if(!routeConfig)location.reload();else load();});
+$('monitor-form').addEventListener('change',()=>preview());let timer;$('monitor-form').addEventListener('input',e=>{if(e.target.id==='destination-query')return;clearTimeout(timer);timer=setTimeout(preview,250);});$('reload-policy').addEventListener('click',()=>{if(!routeConfig)location.reload();else{load();if(!catalogReady)loadCatalog();}});
+async function loadCatalog(){
+ $('reload-destinations').hidden=true;
+ try{const catalog=await json('./data/destinations.json?v=20261030b',30000,'force-cache');known=catalog.cities;cities={...known,...routeConfig.cities};catalogReady=true;$('destination-help').textContent=`支持 ${Object.keys(known).length.toLocaleString('zh-CN')} 个城市，可搜索中文、英文或机场代码。最多关注 12 个。`;renderWatched();renderSuggestions();preview();}
+ catch{$('destination-help').textContent='完整城市目录暂未载入，现有关注仍可编辑。请重试后再搜索新城市。';$('reload-destinations').hidden=false;}
+}
+async function loadFares(){
+ faresLoading=true;preview();
+ try{snapshot=await json('./data/fares.json?t='+Date.now());}
+ catch{snapshot={fares:[],status:'error',updated_at:null};}
+ finally{faresLoading=false;preview();}
+}
+$('reload-destinations').addEventListener('click',loadCatalog);
 try{
- const [config,fares,catalog]=await Promise.all(['config','fares','destinations'].map(n=>json(`./data/${n}.json?t=${Date.now()}`)));routeConfig=config;snapshot=fares;known=catalog.cities;cities={...known,...config.cities};
+ const [config,deployed]=await Promise.all(['config','monitor'].map(n=>json(`./data/${n}.json?t=${Date.now()}`)));routeConfig=config;saved=deployed;
+ known=Object.fromEntries(Object.entries(config.cities).map(([code,c])=>[code,{...c,en:c.name,airports:[]}]));cities={...known};
  for(const code of ['HGH','SHA']){const label=element('label'),input=document.createElement('input');input.type='checkbox';input.value=code;label.append(input,document.createTextNode(cities[code].name));$('monitor-homes').append(label);}
- $('destination-help').textContent=`支持 ${Object.keys(known).length.toLocaleString('zh-CN')} 个城市，可搜索中文、英文或机场代码。最多关注 12 个。`;
  for(const id of ['monitor-start','monitor-end'])$(id).max=dateAfter(today(),730);
- const deployed=await json('./data/monitor.json');saved=deployed;let initial=deployed;
- try{const d=JSON.parse(localStorage.getItem(storageKey));if(d?.base===policySignature(deployed)){initial=d.policy;$('destination-status').textContent='已恢复上次未同步的本机草稿。';}else localStorage.removeItem(storageKey);}catch{}
- fill(initial);ready=true;$('monitor-controls').disabled=false;$('saved-policy').textContent='上次部署保存的规则：'+summarize(deployed);preview();await load(false);
-}catch{$('saved-policy').textContent='城市目录或票价读取失败，请点击刷新重试。';$('monitor-feedback').textContent='无法读取页面数据，请检查网络或本地服务。';}
+ let initial=deployed;try{const d=JSON.parse(localStorage.getItem(storageKey));if(d?.base===policySignature(deployed)){initial=d.policy;$('destination-status').textContent='已恢复上次未同步的本机草稿。';}else localStorage.removeItem(storageKey);}catch{}
+ fill(initial);ready=true;$('monitor-controls').disabled=false;$('saved-policy').textContent='上次部署保存的规则：'+summarize(deployed);preview();
+ await Promise.allSettled([loadCatalog(),loadFares(),load(false)]);
+}catch{$('saved-policy').textContent='基本配置读取失败，请点击刷新重试。';$('monitor-feedback').textContent='无法读取页面数据，请检查网络后重试。';}

@@ -1,4 +1,4 @@
-import {today,filterFares,pairFares,dateAfter as offsetDate,googleFlightLink} from './core.js?v=20261030a';
+import {today,filterFares,pairFares,dateAfter as offsetDate,googleFlightLink} from './core.js?v=20261030b';
 const $=id=>document.getElementById(id);let mode='out',config,data;
 const dateAfter=n=>offsetDate(today(),n);
 let rangePreset='90';
