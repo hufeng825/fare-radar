@@ -22,3 +22,14 @@ class PolicyTests(unittest.TestCase):
    with self.assertRaises((ValueError,TypeError)):p.validate(dict(CFG,**change),ROUTES,dt.date(2026,10,26))
  def test_next_year_policy_is_valid(self):
   self.assertEqual(p.validate(CFG,ROUTES,dt.date(2026,10,26))['destinations'],['OSA'])
+ def test_custom_cities_are_validated_against_catalog_and_bounded(self):
+  c=dict(CFG,destinations=['SDJ','BKK'])
+  self.assertEqual(p.validate(c,ROUTES,dt.date(2026,10,26))['destinations'],['SDJ','BKK'])
+  for values in [['HGH'],['SDJ','SDJ'],['not-a-city'],list(p.catalog())[:13]]:
+   with self.assertRaises(ValueError):p.validate(dict(CFG,destinations=values),ROUTES,dt.date(2026,10,26))
+ def test_custom_city_expands_both_collectable_directions_and_names(self):
+  expanded=p.expand_config(ROUTES,dict(CFG,destinations=['SDJ']))
+  pairs={tuple(r) for r in expanded['routes']}
+  self.assertTrue({('HGH','SDJ'),('SDJ','HGH'),('SHA','SDJ'),('SDJ','SHA')}<=pairs)
+  self.assertEqual(expanded['cities']['SDJ']['name'],'仙台')
+  self.assertNotIn('SDJ',ROUTES['cities'])

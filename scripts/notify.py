@@ -14,6 +14,10 @@ import ssl
 import urllib.error
 import urllib.parse
 import urllib.request
+try:
+    from destinations import expand_config
+except ModuleNotFoundError:
+    from scripts.destinations import expand_config
 
 ROOT = Path(__file__).resolve().parents[1]
 BRANCH = 'notification-state'
@@ -180,6 +184,7 @@ def main():
     args=parser.parse_args()
     cfg=json.loads((ROOT/'notifications.json').read_text())
     routecfg=json.loads((ROOT/'public/data/config.json').read_text())
+    routecfg=expand_config(routecfg,cfg)
     if not cfg.get('enabled',True):
         print('Monitoring paused by saved policy.');return
     enabled=[]

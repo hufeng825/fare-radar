@@ -6,6 +6,10 @@ from pathlib import Path
 import time
 import urllib.request
 import urllib.parse
+try:
+    from destinations import expand_config
+except ModuleNotFoundError:
+    from scripts.destinations import expand_config
 
 ROOT = Path(__file__).resolve().parents[1]
 UTC = dt.timezone.utc
@@ -32,6 +36,7 @@ def main():
     start = dt.datetime.now(dt.timezone(dt.timedelta(hours=8))).date()
     end = start + dt.timedelta(days=180)
     policy=json.loads((ROOT/'notifications.json').read_text())
+    config=expand_config(config,policy)
     monitor_end=dt.date.fromisoformat(policy['depart_end'])+dt.timedelta(days=policy['max_stay'] if policy['mode']=='round' else 0)
     monitored={(h,d) for h in policy['homes'] for d in policy['destinations']}
     monitored|={(b,a) for a,b in list(monitored)}

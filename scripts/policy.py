@@ -6,6 +6,10 @@ import os
 from pathlib import Path
 import re
 import urllib.request
+try:
+    from destinations import catalog, expand_config, MAX_DESTINATIONS
+except ModuleNotFoundError:
+    from scripts.destinations import catalog, expand_config, MAX_DESTINATIONS
 
 ROOT=Path(__file__).resolve().parents[1]
 TITLE='候鸟配置：更新监控规则'
@@ -21,9 +25,9 @@ def validate(value,route_config,today=None):
     if value['mode'] not in ['out','back','round'] or value['min_stay']>value['max_stay']: raise ValueError('Invalid trip mode/stay')
     for k in ['homes','destinations']:
         if not isinstance(value[k],list) or not value[k] or len(value[k])!=len(set(value[k])): raise ValueError('Choose unique cities')
-    if not set(value['homes'])<= {'HGH','SHA'} or not set(value['destinations'])<=set(route_config['cities'])-{'HGH','SHA'}: raise ValueError('Invalid city')
-    configured={tuple(r) for r in route_config['routes']}
-    if not any((h,d) in configured for h in value['homes'] for d in value['destinations']): raise ValueError('No configured routes')
+    allowed=(set(route_config['cities'])|set(catalog()))-{'HGH','SHA'}
+    if not set(value['homes'])<= {'HGH','SHA'} or not set(value['destinations'])<=allowed: raise ValueError('Invalid city')
+    if len(value['destinations'])>MAX_DESTINATIONS: raise ValueError('Too many destinations')
     a=dt.date.fromisoformat(value['depart_start']);b=dt.date.fromisoformat(value['depart_end'])
     if a>b or b>today+dt.timedelta(days=730): raise ValueError('Dates must be ordered and within 730 days')
     # Past starts remain valid for a saved fixed-date policy; expired policies simply find no opportunities.
@@ -58,6 +62,7 @@ def main():
     else:cfg=validate(cfg,routes)
     (ROOT/'notifications.json').write_text(json.dumps(cfg,ensure_ascii=False,indent=2))
     (ROOT/'public/data/monitor.json').write_text(json.dumps(cfg,ensure_ascii=False,indent=2))
+    (ROOT/'public/data/config.json').write_text(json.dumps(expand_config(routes,cfg),ensure_ascii=False,indent=2))
     print('Monitoring configuration validated and synchronized.')
 
 if __name__=='__main__':
