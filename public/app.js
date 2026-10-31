@@ -1,27 +1,54 @@
 import {today,filterFares,pairFares,dateAfter as offsetDate,googleFlightLink} from './core.js?v=20261030b';
+import {dateState,withinDateWindow} from './date-state.js?v=20261031a';
+import {fareData} from './fare-data.js?v=20261031a';
 const $=id=>document.getElementById(id);let mode='out',config,data;
 const dateAfter=n=>offsetDate(today(),n);
 let rangePreset='90';
-$('start').value=today();$('end').value=dateAfter(90);$('start').min=today();$('end').min=today();$('end').max=dateAfter(180);$('start').max=dateAfter(180);
+$('start').value=today();$('end').value=dateAfter(90);$('end').min=today();$('end').max=dateAfter(730);$('start').max=dateAfter(730);
 try{const saved=JSON.parse(localStorage.getItem('fare-settings')||'null');if(saved)for(const id of ['home','region','budget','direct','minStay','maxStay','sort'])if(saved[id]!==undefined){if(id==='direct')$(id).checked=saved[id];else $(id).value=saved[id];}}catch{}
 function text(tag,value,cls){const el=document.createElement(tag);el.textContent=value;if(cls)el.className=cls;return el;}
 function searchLink(origin,dest,date){return googleFlightLink(config.cities,origin,dest,date);}
-try{const saved=JSON.parse(localStorage.getItem('fare-range')||'null');if(saved&&['7','30','90','180'].includes(saved.preset)){rangePreset=saved.preset;$('end').value=dateAfter(+rangePreset);}else if(saved?.preset==='custom'&&saved.start>=today()&&saved.start<=saved.end&&saved.end<=dateAfter(180)){rangePreset='custom';$('start').value=saved.start;$('end').value=saved.end;}}catch{}
+try{const saved=JSON.parse(localStorage.getItem('fare-range')||'null');if(saved&&['7','30','90','180'].includes(saved.preset)){rangePreset=saved.preset;$('end').value=dateAfter(+rangePreset);}else if(saved?.preset==='custom'&&saved.start>=today()&&saved.start<=saved.end&&saved.end<=dateAfter(730)){rangePreset='custom';$('start').value=saved.start;$('end').value=saved.end;}}catch{}
 function updateRange(){
  document.querySelectorAll('[data-days]').forEach(b=>{const active=b.dataset.days===rangePreset;b.classList.toggle('active',active);b.setAttribute('aria-pressed',String(active));});
- $('range-summary').textContent=`${rangePreset==='custom'?'自定义日期':'今天起 '+rangePreset+' 天内'} · ${$('start').value} 至 ${$('end').value} · 网页日期筛选 · 后台推送以「我的监控」为准`;
+ $('range-summary').textContent=`${rangePreset==='custom'?'自定义日期':'今天起 '+rangePreset+' 天内'} · ${$('start').value} 至 ${$('end').value} · 日期与「我的监控」同步；微信规则需另行保存`;
  try{localStorage.setItem('fare-range',JSON.stringify({preset:rangePreset,start:$('start').value,end:$('end').value}));}catch{}
 }
-document.querySelectorAll('[data-days]').forEach(b=>b.addEventListener('click',()=>{rangePreset=b.dataset.days;if(rangePreset!=='custom'){$('start').value=today();$('end').value=dateAfter(+rangePreset);}updateRange();render();}));
-for(const id of ['start','end'])$(id).addEventListener('input',()=>{rangePreset='custom';updateRange();});
+document.querySelectorAll('[data-days]').forEach(b=>b.addEventListener('click',()=>{rangePreset=b.dataset.days;if(rangePreset!=='custom'){$('start').value=today();$('end').value=dateAfter(+rangePreset);}publishDates();updateRange();render();}));
+function publishDates(){dateState.set({start:$('start').value,end:$('end').value},'explore');}
+for(const id of ['start','end'])for(const event of ['input','change'])$(id).addEventListener(event,()=>{rangePreset='custom';publishDates();updateRange();render();});
+dateState.subscribe((range,source)=>{if(source==='explore')return;$('start').value=range.start;$('end').value=range.end;rangePreset='custom';updateRange();render();});
+dateState.set({start:$('start').value,end:$('end').value},'explore',0);
+if(dateState.read()){const range=dateState.read();$('start').value=range.start;$('end').value=range.end;rangePreset='custom';}
 updateRange();
 function link(label,url){const a=text('a',label);a.href=url;a.target='_blank';a.rel='noreferrer';return a;}
-function render(){if(!config||!data)return;const s={home:$('home').value,region:$('region').value,budget:+$('budget').value,start:$('start').value,end:$('end').value,direct:$('direct').checked,minStay:+$('minStay').value,maxStay:+$('maxStay').value,direction:mode==='back'?'back':'out'};
+function render(){const s={home:$('home').value,region:$('region').value,budget:+$('budget').value,start:$('start').value,end:$('end').value,direct:$('direct').checked,minStay:+$('minStay').value,maxStay:+$('maxStay').value,direction:mode==='back'?'back':'out'};
+$('explore-applied').textContent='当前筛选：'+s.start+' 至 '+s.end+' 出发';$('results').dataset.filterStart=s.start;$('results').dataset.filterEnd=s.end;
 $('stay').hidden=mode!=='round';$('validation').textContent='';$('results').replaceChildren();$('count').textContent='0';
-if(!$('filters').checkValidity()||s.start>s.end||s.start<today()||s.end>dateAfter(180)||(mode==='round'&&s.minStay>s.maxStay)){$('validation').textContent='请检查预算、日期范围（今天起 180 天内）与停留天数。';return;}
+if(!$('filters').checkValidity()||s.start>s.end||s.end<today()||s.end>dateAfter(730)||(mode==='round'&&s.minStay>s.maxStay)){$('validation').textContent='请检查预算、日期范围（今天起两年内）与停留天数。';return;}
+if(!config||!data)return;
 try{localStorage.setItem('fare-settings',JSON.stringify(Object.fromEntries(['home','region','budget','direct','minStay','maxStay','sort'].map(id=>[id,id==='direct'?$(id).checked:$(id).value]))));}catch{}
-let rows=filterFares(data.fares,s,config.cities);if(mode==='round')rows=pairFares(rows,data.fares,s);rows.sort($('sort').value==='date'?(a,b)=>a.date.localeCompare(b.date):(a,b)=>(a.total||a.price)-(b.total||b.price));$('count').textContent=rows.length;
+let rows=filterFares(data.fares,{...s,start:s.start<today()?today():s.start},config.cities);if(mode==='round')rows=pairFares(rows,data.fares,s);rows=rows.filter(f=>withinDateWindow(f.date,{start:s.start,end:s.end}));rows.sort($('sort').value==='date'?(a,b)=>a.date.localeCompare(b.date):(a,b)=>(a.total||a.price)-(b.total||b.price));$('count').textContent=rows.length;
 if(!rows.length){const box=text('div','','empty');box.append(text('div','⌁','icon'),text('h3',data.status==='unconfigured'?'雷达已就位，等待接入真实票价':'暂时没有符合条件的新鲜报价'),text('p',data.status==='unconfigured'?'配置 API 后将自动寻找低价；现在可以直接打开航班搜索。':'试试放宽日期或预算。缓存覆盖有限，无结果不代表没有便宜机票。'));const links=text('div','','quick-links');for(const [a,b]of config.routes.filter(([a,b])=>(mode==='back'?['HGH','SHA'].includes(b):['HGH','SHA'].includes(a))&&(!s.home||(mode==='back'?b:a)===s.home)&&(!s.region||config.cities[mode==='back'?a:b].region===s.region)))links.append(link(config.cities[a].name+' → '+config.cities[b].name+' ↗',searchLink(a,b,s.start)));box.append(links);$('results').append(box);return;}
-for(const f of rows.slice(0,150)){const card=text('article','','fare'),route=text('div','');route.append(text('h3',`${config.cities[f.origin].name} ${f.returnFare?'⇄':'→'} ${config.cities[f.destination].name}`),text('small',`${f.origin} → ${f.destination} · ${f.stops===0?'直飞':f.stops+' 次中转'}`));const dates=text('div','');dates.append(text('div',f.date+(f.returnFare?' / '+f.returnFare.date:'')),text('small','缓存发现 '+new Date(f.found_at).toLocaleString('zh-CN',{timeZone:'Asia/Shanghai'})));const price=text('div','');price.append(text('div','¥'+Math.round(f.total||f.price),'price'),text('small',f.returnFare?`去 ¥${f.price} + 回 ¥${f.returnFare.price}`:'单程 / 税费与行李待复核'));const actions=text('div','');if(f.returnFare)actions.append(link('一键查往返 ↗',googleFlightLink(config.cities,f.origin,f.destination,f.date,f.returnFare.date)),document.createElement('br'));actions.append(link(f.returnFare?'核实去程 ↗':'核实票价 ↗',searchLink(f.origin,f.destination,f.date)));if(f.returnFare)actions.append(document.createElement('br'),link('核实返程 ↗',searchLink(f.destination,f.origin,f.returnFare.date)));card.append(route,dates,price,actions);$('results').append(card);}if(rows.length>150)$('results').append(text('p','仅展示价格/日期排序后的前 150 条，请缩小条件查看。'));}
-async function load(){const button=$('refresh');button.disabled=true;try{const responses=await Promise.all(['config','fares'].map(n=>fetch(`./data/${n}.json?t=${Date.now()}`,{cache:'no-store'})));if(responses.some(r=>!r.ok))throw Error();[config,data]=await Promise.all(responses.map(r=>r.json()));if(!Array.isArray(data.fares))throw Error();for(const region of new Set(Object.values(config.cities).map(c=>c.region).filter(r=>r!=='中国'))){if(![...$('region').options].some(o=>o.value===region)){$('region').append(new Option(region,region));}}const stale=!data.updated_at||Date.now()-Date.parse(data.updated_at)>24*3600000;$('status').textContent=data.status==='unconfigured'?'○ 尚未配置票价 API · 当前没有真实报价，需配置 TRAVELPAYOUTS_TOKEN 后采集。':`${data.status==='partial'?'△ 部分航线更新失败':'● 已读取缓存快照'} · 更新于 ${new Date(data.updated_at).toLocaleString('zh-CN',{timeZone:'Asia/Shanghai'})}${stale?' · 快照超过 24 小时，请检查采集任务':''} · 页面刷新只读取快照，不触发实时询价。`;render();}catch{$('status').textContent='读取失败，请检查网络或使用本地 HTTP 服务打开；已有结果可能过时。';}finally{button.disabled=false;}}
-$('filters').addEventListener('submit',e=>e.preventDefault());$('filters').addEventListener('input',render);$('filters').addEventListener('change',render);document.querySelectorAll('[data-mode]').forEach(b=>b.addEventListener('click',()=>{mode=b.dataset.mode;document.querySelectorAll('[data-mode]').forEach(x=>{x.classList.toggle('active',x===b);x.setAttribute('aria-pressed',String(x===b));});render();}));$('refresh').addEventListener('click',load);load();
+for(const f of rows.slice(0,150)){const card=text('article','','fare');card.dataset.departureDate=f.date;if(f.returnFare)card.dataset.returnDate=f.returnFare.date;const route=text('div','');route.append(text('h3',`${(config.cities[f.origin]?.name||f.origin)} ${f.returnFare?'⇄':'→'} ${(config.cities[f.destination]?.name||f.destination)}`),text('small',`${f.origin} → ${f.destination} · ${f.stops===0?'直飞':f.stops+' 次中转'}`));const dates=text('div','');dates.append(text('div',f.date+(f.returnFare?' / '+f.returnFare.date:'')),text('small','缓存发现 '+new Date(f.found_at).toLocaleString('zh-CN',{timeZone:'Asia/Shanghai'})));const price=text('div','');price.append(text('div','¥'+Math.round(f.total||f.price),'price'),text('small',f.returnFare?`去 ¥${f.price} + 回 ¥${f.returnFare.price}`:'单程 / 税费与行李待复核'));const actions=text('div','');if(f.returnFare)actions.append(link('一键查往返 ↗',googleFlightLink(config.cities,f.origin,f.destination,f.date,f.returnFare.date)),document.createElement('br'));actions.append(link(f.returnFare?'核实去程 ↗':'核实票价 ↗',searchLink(f.origin,f.destination,f.date)));if(f.returnFare)actions.append(document.createElement('br'),link('核实返程 ↗',searchLink(f.destination,f.origin,f.returnFare.date)));card.append(route,dates,price,actions);$('results').append(card);}if(rows.length>150)$('results').append(text('p','仅展示价格/日期排序后的前 150 条，请缩小条件查看。'));}
+function showSnapshotStatus(){
+ if(!data)return;
+ const stale=!data.updated_at||Date.now()-Date.parse(data.updated_at)>24*3600000;
+ $('status').textContent=data.status==='unconfigured'?'○ 暂无报价，可使用直接查票入口。':`${data.status==='partial'?'△ 部分航线更新失败':'● 已读取缓存快照'} · 更新于 ${new Date(data.updated_at).toLocaleString('zh-CN',{timeZone:'Asia/Shanghai'})}${stale?' · 快照超过 24 小时，请检查采集任务':''} · 修改日期会重新筛选，不会触发实时询价。`;
+}
+fareData.subscribe(event=>{
+ data=event.status==='ready'?event.snapshot:null;
+ if(event.status==='loading')$('status').textContent='正在读取最新票价，旧结果已清除…';
+ else if(event.status==='error')$('status').textContent='票价读取失败，旧结果已清除。请刷新重试。';
+ else showSnapshotStatus();
+ render();
+});
+async function load(force=false){const button=$('refresh');button.disabled=true;try{
+ const [freshConfig]=await Promise.all([fetch('./data/config.json?t='+Date.now(),{cache:'no-store'}).then(r=>{if(!r.ok)throw Error();return r.json();}),fareData.load(force)]);
+ config=freshConfig;
+ for(const region of new Set(Object.values(config.cities).map(c=>c.region).filter(r=>r!=='中国'))){if(![...$('region').options].some(o=>o.value===region))$('region').append(new Option(region,region));}
+ showSnapshotStatus();render();
+ }catch{$('status').textContent='读取失败，旧结果已清除，请检查网络后重试。';$('results').replaceChildren();$('count').textContent='0';}
+ finally{button.disabled=false;}}
+$('explore-apply-dates').addEventListener('click',()=>{publishDates();render();$('explore-applied').scrollIntoView({behavior:'smooth'});});
+$('filters').addEventListener('submit',e=>e.preventDefault());$('filters').addEventListener('input',render);$('filters').addEventListener('change',render);document.querySelectorAll('[data-mode]').forEach(b=>b.addEventListener('click',()=>{mode=b.dataset.mode;document.querySelectorAll('[data-mode]').forEach(x=>{x.classList.toggle('active',x===b);x.setAttribute('aria-pressed',String(x===b));});render();}));$('refresh').addEventListener('click',()=>load(true));load();

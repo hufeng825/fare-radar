@@ -1,6 +1,8 @@
 import {today,dateAfter,dayDiff,googleFlightLink} from './core.js?v=20261030b';
 import {searchDestinations,policySignature,MAX_DESTINATIONS} from './destinations.js?v=20261030b';
 import {preserveDraftOnRefresh,dateFilterLabel,beyondSnapshotCoverage} from './monitor-state.js?v=20261030d';
+import {dateState,withinDateWindow} from './date-state.js?v=20261031a';
+import {fareData} from './fare-data.js?v=20261031a';
 const $=id=>document.getElementById(id),repo='hufeng825/fare-radar',storageKey='fare-watch-draft-v2';
 let cities={},routeConfig,snapshot={fares:[],status:"loading",updated_at:null},saved,known={},watched=new Set(),ready=false,loading=false,catalogReady=false,faresLoading=true;
 const fields={'monitor-budget':'budget_cny','monitor-leg-budget':'per_leg_budget_cny','monitor-min-stay':'min_stay','monitor-max-stay':'max_stay','monitor-drop':'min_drop_cny','monitor-daily':'max_digests_per_day','monitor-items':'max_items_per_digest','monitor-per-route':'max_per_route'};
@@ -8,7 +10,7 @@ const toggles={'monitor-enabled':'enabled','monitor-direct':'direct_only','monit
 function selected(id){return [...$(id).querySelectorAll('input:checked')].map(x=>x.value);}
 function draft(){const c={homes:selected('monitor-homes'),destinations:[...watched],mode:$('monitor-mode').value,depart_start:$('monitor-start').value,depart_end:$('monitor-end').value};for(const [id,key]of Object.entries(fields))c[key]=+$(id).value;for(const [id,key]of Object.entries(toggles))c[key]=$(id).checked;return c;}
 function dirty(c=draft()){return saved&&policySignature(c)!==policySignature(saved);}
-function fill(c){watched=new Set(c.destinations);for(const x of $('monitor-homes').querySelectorAll('input'))x.checked=c.homes.includes(x.value);for(const [id,key]of Object.entries(fields))$(id).value=c[key];for(const [id,key]of Object.entries(toggles))$(id).checked=c[key];$('monitor-mode').value=c.mode;$('monitor-start').value=c.depart_start;$('monitor-end').value=c.depart_end;$('monitor-period').value=(c.depart_start===`${+today().slice(0,4)+1}-01-01`&&c.depart_end===`${+today().slice(0,4)+1}-12-31`)?'next-year':'custom';updateMode();renderWatched();}
+function fill(c,forceDates=false){watched=new Set(c.destinations);for(const x of $('monitor-homes').querySelectorAll('input'))x.checked=c.homes.includes(x.value);for(const [id,key]of Object.entries(fields))$(id).value=c[key];for(const [id,key]of Object.entries(toggles))$(id).checked=c[key];$('monitor-mode').value=c.mode;dateState.set({start:c.depart_start,end:c.depart_end},'monitor',forceDates?2:1);const range=dateState.read()||{start:c.depart_start,end:c.depart_end};$('monitor-start').value=range.start;$('monitor-end').value=range.end;$('monitor-period').value=(range.start===`${+today().slice(0,4)+1}-01-01`&&range.end===`${+today().slice(0,4)+1}-12-31`)?'next-year':'custom';updateMode();renderWatched();}
 function updateMode(){$('monitor-budget-label').textContent=$('monitor-mode').value==='round'?'往返总预算（元）':'单程总预算（元）';for(const id of ['monitor-min-stay','monitor-max-stay'])$(id).disabled=$('monitor-mode').value!=='round';}
 function names(xs){return xs.map(x=>cities[x]?.name||x).join(' / ');}
 function summarize(c){return `${names(c.homes)} ${c.mode==='round'?'⇄':c.mode==='back'?'←':'→'} ${names(c.destinations)} · ${c.depart_start} 至 ${c.depart_end} · ${c.mode==='round'?'往返':'单程'} ≤ ¥${c.budget_cny} / 每程 ≤ ¥${c.per_leg_budget_cny} · ${c.mode==='round'?`停留 ${c.min_stay}–${c.max_stay} 天 · `:''}${c.wechat_enabled?'微信开启':'微信关闭'} · 每天最多 ${c.max_digests_per_day} 次`;}
@@ -51,7 +53,7 @@ if(c.mode==='out')return outbound.filter(f=>f.price<=c.budget_cny);
 if(c.mode==='back')return fares.filter(f=>c.destinations.includes(f.origin)&&c.homes.includes(f.destination)&&f.date>=c.depart_start&&f.date<=c.depart_end&&f.price<=c.budget_cny);
 return outbound.flatMap(a=>fares.filter(b=>b.origin===a.destination&&b.destination===a.origin&&dayDiff(a.date,b.date)>=c.min_stay&&dayDiff(a.date,b.date)<=c.max_stay&&a.price+b.price<=c.budget_cny).map(b=>({...a,price:a.price+b.price,returnFare:b}))).sort((a,b)=>a.price-b.price);}
 function renderMatch(f,outside=false){
- const card=element('article',undefined,'monitor-preview-row');
+ const card=element('article',undefined,'monitor-preview-row');card.dataset.departureDate=f.date;if(f.returnFare)card.dataset.returnDate=f.returnFare.date;
  const trip=element('div');trip.append(element('h4',`${names([f.origin])} ${f.returnFare?'⇄':'→'} ${names([f.destination])}`));
  trip.append(element('p',`${f.date}${f.returnFare?' 出发 · '+f.returnFare.date+' 返回 · '+dayDiff(f.date,f.returnFare.date)+' 天':''}`));
  if(f.returnFare)trip.append(element('p',`去程 ¥${f.price-f.returnFare.price} + 返程 ¥${f.returnFare.price} · 独立单程组合`));
@@ -73,10 +75,10 @@ function preview(){
  $('date-preview-status').textContent='已按当前日期筛选 · '+new Date().toLocaleTimeString('zh-CN',{timeZone:'Asia/Shanghai',hour12:false});
  $('watch-state').textContent=`${saved.enabled?'监控开启':'监控暂停'} · ${saved.wechat_enabled?'微信提醒开启':'微信提醒关闭'}${changed?' · 有未同步修改':''}`;
  $('draft-state').textContent=changed?'本机草稿 · 尚未同步微信':'已与云端规则一致';$('reset-policy').disabled=!changed;$('save-policy').disabled=!changed;
- $('monitor-preview').replaceChildren();
+ $('monitor-preview').replaceChildren();$('monitor-preview').dataset.filterStart=c.depart_start;$('monitor-preview').dataset.filterEnd=c.depart_end;
  try{check(c);}catch(e){$('monitor-feedback').textContent=e.message;$('date-preview-status').textContent='日期或条件尚未填完整，旧结果已清除';$('save-policy').disabled=true;return;}
  const age=Date.now()-Date.parse(snapshot.updated_at);$('watch-health').textContent=faresLoading?'正在读取最新票价快照…':!Number.isFinite(age)||age>24*3600000?'当前快照已过期，等待后台更新；不会把旧报价当作新低价提醒。':`更新于 ${new Date(snapshot.updated_at).toLocaleString('zh-CN',{timeZone:'Asia/Shanghai'})} · 后台约每 6 小时查价`;
- const rows=opportunities(c).sort((a,b)=>a.price-b.price),dates=new Set();
+ const range={start:c.depart_start,end:c.depart_end};const rows=opportunities(c).filter(f=>withinDateWindow(f.date,range)).sort((a,b)=>a.price-b.price),dates=new Set();
  const distinct=rows.filter(f=>{const k=[f.origin,f.destination,f.date].join('-');if(dates.has(k))return false;dates.add(k);return true;});
  $('monitor-feedback').textContent=faresLoading?'正在读取票价，可先编辑目的地和条件。':snapshot.status==='error'?'票价暂时读取失败，请点击刷新重试。关注草稿仍可正常编辑。':distinct.length?`找到 ${distinct.length} 个出发日期，同一天保留最便宜组合。${changed?'当前为草稿预览。':''}`:'当前日期范围内暂无完全符合条件的新鲜报价。';
  if(!faresLoading&&beyondSnapshotCoverage(c,snapshot))$('monitor-preview').append(element('p',`所选日期超出当前票价覆盖（至 ${snapshot.coverage_end}）。请同步保存监控条件，等待后台采集；也可使用下方的直接查票入口。`,'pending-destinations'));
@@ -101,31 +103,33 @@ for(const name of ['monitor','explore'])$('tab-'+name).addEventListener('click',
 document.querySelector('.settings-link').addEventListener('click',e=>{e.preventDefault();showWorkspace('monitor');$('monitor-heading').scrollIntoView({behavior:'smooth'});});
 $('destination-query').addEventListener('input',renderSuggestions);$('destination-query').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();const first=$('destination-suggestions').querySelector('button:not(:disabled)');if(first)first.click();}if(e.key==='Escape'){$('destination-query').value='';renderSuggestions();}});
 $('clear-destinations').addEventListener('click',()=>{watched.clear();renderWatched();renderSuggestions();preview();});
-$('reset-policy').addEventListener('click',()=>{fill(saved);$('destination-status').textContent='已恢复云端保存的关注列表和条件。';preview();});
+$('reset-policy').addEventListener('click',()=>{fill(saved,true);$('destination-status').textContent='已恢复云端保存的关注列表和条件。';preview();});
 $('monitor-form').addEventListener('submit',e=>{e.preventDefault();try{const c=draft();check(c);if(!dirty(c))return;const body='由候鸟机票雷达配置页面提交。仅仓库主人提交的配置会被自动应用。\n\n```json\n'+JSON.stringify(c,null,2)+'\n```';const url=`https://github.com/${repo}/issues/new?`+new URLSearchParams({title:'候鸟配置：更新监控规则',body});window.open(url,'_blank','noopener,noreferrer');$('draft-state').textContent='请在新打开的 GitHub 页面点击 Create 确认保存；完成后回来刷新规则。';}catch(e){$('draft-state').textContent=e.message;}});
 $('monitor-mode').addEventListener('change',updateMode);
-$('monitor-period').addEventListener('change',()=>{const v=$('monitor-period').value;if(v==='next-year'){const y=+today().slice(0,4)+1;$('monitor-start').value=`${y}-01-01`;$('monitor-end').value=`${y}-12-31`;}else if(v!=='custom'){$('monitor-start').value=today();$('monitor-end').value=dateAfter(today(),+v);}});
-for(const id of ['monitor-start','monitor-end']){for(const event of ['input','change'])$(id).addEventListener(event,()=>{$('monitor-period').value='custom';preview();});}
-$('apply-dates').addEventListener('click',()=>{preview();$('match-heading').scrollIntoView({behavior:'smooth'});});
+$('monitor-period').addEventListener('change',()=>{const v=$('monitor-period').value;if(v==='next-year'){const y=+today().slice(0,4)+1;$('monitor-start').value=`${y}-01-01`;$('monitor-end').value=`${y}-12-31`;}else if(v!=='custom'){$('monitor-start').value=today();$('monitor-end').value=dateAfter(today(),+v);}publishDates();});
+for(const id of ['monitor-start','monitor-end']){for(const event of ['input','change'])$(id).addEventListener(event,()=>{$('monitor-period').value='custom';publishDates();preview();});}
+$('apply-dates').addEventListener('click',()=>{publishDates();preview();$('match-heading').scrollIntoView({behavior:'smooth'});});
 $('monitor-form').addEventListener('change',()=>preview());let timer;$('monitor-form').addEventListener('input',e=>{if(['destination-query','monitor-start','monitor-end'].includes(e.target.id))return;clearTimeout(timer);timer=setTimeout(preview,250);});$('reload-policy').addEventListener('click',()=>{if(!routeConfig)location.reload();else{load();if(!catalogReady)loadCatalog();}});
 async function loadCatalog(){
  $('reload-destinations').hidden=true;
  try{const catalog=await json('./data/destinations.json?v=20261030b',30000,'force-cache');known=catalog.cities;cities={...known,...routeConfig.cities};catalogReady=true;$('destination-help').textContent=`支持 ${Object.keys(known).length.toLocaleString('zh-CN')} 个城市，可搜索中文、英文或机场代码。最多关注 12 个。`;renderWatched();renderSuggestions();preview();}
  catch{$('destination-help').textContent='完整城市目录暂未载入，现有关注仍可编辑。请重试后再搜索新城市。';$('reload-destinations').hidden=false;}
 }
-async function loadFares(){
- faresLoading=true;preview();
- try{snapshot=await json('./data/fares.json?t='+Date.now());}
- catch{snapshot={fares:[],status:'error',updated_at:null};}
- finally{faresLoading=false;preview();}
-}
+function publishDates(){dateState.set({start:$('monitor-start').value,end:$('monitor-end').value},'monitor');}
+dateState.subscribe((range,source)=>{if(source==='monitor')return;$('monitor-start').value=range.start;$('monitor-end').value=range.end;$('monitor-period').value='custom';preview();});
+fareData.subscribe(event=>{
+ faresLoading=event.status==='loading';
+ snapshot=event.status==='ready'?event.snapshot:{fares:[],status:event.status,updated_at:null};
+ preview();
+});
+async function loadFares(force=true){try{await fareData.load(force);}catch{}}
 $('reload-destinations').addEventListener('click',loadCatalog);
 try{
  const [config,deployed]=await Promise.all(['config','monitor'].map(n=>json(`./data/${n}.json?t=${Date.now()}`)));routeConfig=config;saved=deployed;
  known=Object.fromEntries(Object.entries(config.cities).map(([code,c])=>[code,{...c,en:c.name,airports:[]}]));cities={...known};
  for(const code of ['HGH','SHA']){const label=element('label'),input=document.createElement('input');input.type='checkbox';input.value=code;label.append(input,document.createTextNode(cities[code].name));$('monitor-homes').append(label);}
  for(const id of ['monitor-start','monitor-end'])$(id).max=dateAfter(today(),730);
- let initial=deployed;try{const d=JSON.parse(localStorage.getItem(storageKey));if(d?.base===policySignature(deployed)){initial=d.policy;$('destination-status').textContent='已恢复上次未同步的本机草稿。';}else localStorage.removeItem(storageKey);}catch{}
- fill(initial);ready=true;$('monitor-controls').disabled=false;$('saved-policy').textContent='上次部署保存的规则：'+summarize(deployed);preview();
- await Promise.allSettled([loadCatalog(),loadFares(),load(false)]);
+ let initial=deployed,restored=false;try{const d=JSON.parse(localStorage.getItem(storageKey));if(d?.base===policySignature(deployed)){initial=d.policy;restored=true;$('destination-status').textContent='已恢复上次未同步的本机草稿。';}else localStorage.removeItem(storageKey);}catch{}
+ fill(initial,restored&&!dateState.committed());ready=true;$('monitor-controls').disabled=false;$('saved-policy').textContent='上次部署保存的规则：'+summarize(deployed);preview();
+ await Promise.allSettled([loadCatalog(),loadFares(false),load(false)]);
 }catch{$('saved-policy').textContent='基本配置读取失败，请点击刷新重试。';$('monitor-feedback').textContent='无法读取页面数据，请检查网络后重试。';}
