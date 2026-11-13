@@ -3,7 +3,7 @@
   "channels": {
     "wechat:be52eec9a5be8ed1a9ca2a81cc14f900e4bbde4ee75ff879636df543d8e24ecf": {
       "day": "2026-11-13",
-      "digests": 1,
+      "digests": 2,
       "sent": {
         "eafdd95951a74ea893c3ce16b46980ce8b05a560accc39174b082a42da97edf0": {
           "price": 572.0,
@@ -196,6 +196,14 @@
         "765fc473208d1c4cfa02f12777edeef3c9a5285258d7456436dd1a7985e18e5d": {
           "price": 2000.0,
           "date": "2027-02-23"
+        },
+        "9284948eb7cb8ac96e9f52b68b214c9bcefbd3f64d1437749f6efc111042d95a": {
+          "price": 2000.0,
+          "date": "2027-02-20"
+        },
+        "dba730bbc3cb10de156f577c8058593f837a44b2a30eb7a127c28ace6df2fd31": {
+          "price": 2000.0,
+          "date": "2027-02-21"
         }
       }
     }
