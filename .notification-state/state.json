@@ -2,17 +2,9 @@
   "version": 1,
   "channels": {
     "wechat:be52eec9a5be8ed1a9ca2a81cc14f900e4bbde4ee75ff879636df543d8e24ecf": {
-      "day": "2026-11-14",
-      "digests": 2,
+      "day": "2026-11-20",
+      "digests": 1,
       "sent": {
-        "eafdd95951a74ea893c3ce16b46980ce8b05a560accc39174b082a42da97edf0": {
-          "price": 572.0,
-          "date": "2026-11-17"
-        },
-        "44e17fd035ae950d5511cde0dff981f291a895bebf2702749d08e4702944b5fe": {
-          "price": 587.0,
-          "date": "2026-11-19"
-        },
         "eb33be11f426207004b1bf1d2c2b4f7e79ac88987c1aa5555a7cb1caf89ef552": {
           "price": 587.0,
           "date": "2026-11-20"
@@ -44,26 +36,6 @@
         "188ed4d17c20218aba2175a28f26a7324ed66bed2f62ba6a35be7e713bb61fc2": {
           "price": 587.0,
           "date": "2026-11-27"
-        },
-        "8d7467e32c83899d591dd2505cc5fc3fb42aeaefc07c3b70651dc59e646e2e73": {
-          "price": 624.0,
-          "date": "2026-11-15"
-        },
-        "e107a68be5d553dc255fe52efc8edcc2cb0983d39a456b8717f5cac731e8a4a4": {
-          "price": 624.0,
-          "date": "2026-11-16"
-        },
-        "c57b9830f51cfd20e2ef057313e140f79a05b2bf164766fd1348c5f14a8e3d58": {
-          "price": 642.0,
-          "date": "2026-11-16"
-        },
-        "01be60c382dd9e5d55b453bfe53e7209c63227c8125b7e44414af5def3ed824f": {
-          "price": 642.0,
-          "date": "2026-11-17"
-        },
-        "aaba942241df83a060a75867856c5b2252b09e9c38516af28f06f012acc6240a": {
-          "price": 642.0,
-          "date": "2026-11-18"
         },
         "63aa5c13f35469141ce24cb112f16a47f4b1817bb2cf52449af9ded6e7046602": {
           "price": 662.0,
@@ -216,6 +188,14 @@
         "abe0b003287dbe110d17ed1174e0ebbc17a0f0009390d7c131ec68263d2a94d1": {
           "price": 1999.0,
           "date": "2027-02-25"
+        },
+        "e5e61835cbd036803b85a95b75854ae2cdabf9fa913628308a8437be30947ed6": {
+          "price": 1966.0,
+          "date": "2027-06-13"
+        },
+        "20dd86830e782081d20418091c99ad69b759f52abaad2346238fd6718eaa46c8": {
+          "price": 1982.0,
+          "date": "2027-04-27"
         }
       }
     }
