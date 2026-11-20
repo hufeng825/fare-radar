@@ -2,13 +2,9 @@
   "version": 1,
   "channels": {
     "wechat:be52eec9a5be8ed1a9ca2a81cc14f900e4bbde4ee75ff879636df543d8e24ecf": {
-      "day": "2026-11-20",
+      "day": "2026-11-21",
       "digests": 1,
       "sent": {
-        "eb33be11f426207004b1bf1d2c2b4f7e79ac88987c1aa5555a7cb1caf89ef552": {
-          "price": 587.0,
-          "date": "2026-11-20"
-        },
         "173cb3e8d2754150fbd7ec3c9b6b8dbd7716f2c5fc37f45e2a178ce05e4ef6d4": {
           "price": 587.0,
           "date": "2026-11-21"
@@ -56,10 +52,6 @@
         "e53901fb77c51236671b14daa9176676c36edf2860e2076de26c7eee40d30007": {
           "price": 662.0,
           "date": "2027-01-14"
-        },
-        "5c70bc0b24c2db12fc24579523be0619f87f943c45a0b88bf41447b7cc3ca13b": {
-          "price": 673.0,
-          "date": "2026-11-20"
         },
         "e807b673d176d35a73f57a9d4e2923236566f1d8dbb2e9093e26df914dc10683": {
           "price": 678.0,
@@ -196,6 +188,14 @@
         "20dd86830e782081d20418091c99ad69b759f52abaad2346238fd6718eaa46c8": {
           "price": 1982.0,
           "date": "2027-04-27"
+        },
+        "59f3251180a1bcd937108d3eb2445efbd11c73f5bc76ab2b93a965646a2df1a5": {
+          "price": 1924.0,
+          "date": "2027-04-10"
+        },
+        "153352ef00f215b070dba23be2d3a79c0a81b46f37357c617a180a3b34db0275": {
+          "price": 1991.0,
+          "date": "2027-02-21"
         }
       }
     }
