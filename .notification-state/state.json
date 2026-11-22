@@ -2,13 +2,9 @@
   "version": 1,
   "channels": {
     "wechat:be52eec9a5be8ed1a9ca2a81cc14f900e4bbde4ee75ff879636df543d8e24ecf": {
-      "day": "2026-11-21",
-      "digests": 2,
+      "day": "2026-11-22",
+      "digests": 1,
       "sent": {
-        "173cb3e8d2754150fbd7ec3c9b6b8dbd7716f2c5fc37f45e2a178ce05e4ef6d4": {
-          "price": 587.0,
-          "date": "2026-11-21"
-        },
         "48573d5c24054d1967435d5808e9677fcf3993a52d23e866ebed5beeaf3e5ae8": {
           "price": 587.0,
           "date": "2026-11-22"
@@ -200,6 +196,14 @@
         "e32115ba1610ac89b28ec472e6669387d90cb0972b6328e92af554865e9049b9": {
           "price": 1987.0,
           "date": "2027-05-06"
+        },
+        "1d8309783b448bb7ec9217ebb5d851a8fffd99251693078f48d7e1cc996bed19": {
+          "price": 1796.0,
+          "date": "2027-04-14"
+        },
+        "09843395bca66cc44936e866835c9b10d5884aa3c6bf465717e73ba019929bd5": {
+          "price": 1796.0,
+          "date": "2027-04-14"
         }
       }
     }
